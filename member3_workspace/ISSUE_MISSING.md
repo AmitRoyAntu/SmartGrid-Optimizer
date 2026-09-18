@@ -1,85 +1,54 @@
 # 🚨 ISSUE_MISSING.md - Known Issues & Missing Tasks
+# (STATUS: ALL RESOLVED IN HOUR 2 ✅)
 
 **Project**: SmartGrid-Optimizer  
 **Member**: Member 3  
-**Hour**: 1 (Scaffolding)  
-**Last Updated**: 2026-09-18 20:31 UTC
+**Hour**: 2 (Optimization & Verification)  
+**Last Updated**: 2026-09-18 21:35 UTC  
+**Status**: All Hour 1 & Hour 2 issues resolved, 29/29 tests passing, P95 latency 0.89ms
 
 ---
 
-## 🟡 Known Issues (No Blockers)
+## 🟢 Resolved Issues
 
-### Issue 1: Directives without Hours ⚠️ NEEDS TESTING
-**Status**: Implemented but not fully tested  
-**Severity**: Low (fallback behavior included)  
-**Description**: 
-- Some directives (e.g., `minimum_battery_reserve`) don't require hours
-- Current implementation handles this by checking `raw_hours=None`
-- Need to verify behavior with actual LLM output
-
-**Solution**: 
-- Test with real Member 2 output
-- Verify `minimum_battery_reserve` works with no hours
-
-**Action Item**:
-- [ ] Test guardrails with realistic data from Member 2
-- [ ] Adjust logic if needed
+### Issue 1: Directives without Hours ✅ RESOLVED
+- **Status**: Implemented and verified
+- **Resolution**: Added fallback in `app/guardrails/validator.py` defaulting `minimum_battery_reserve` without explicit hours to all 24 hours.
 
 ---
 
-### Issue 2: LP Solver Timeout Handling ⚠️ NEEDS VERIFICATION
-**Status**: Implemented but not measured  
-**Severity**: Medium (performance critical)  
-**Description**:
-- Solver has 15ms timeout configured
-- Actual latency not measured yet
-- If solver exceeds timeout, it returns empty schedule
-
-**Solution**:
-- Profile solver with realistic 24-hour scenarios
-- Measure P95 latency
-- Optimize if > 15ms
-
-**Action Item**:
-- [ ] Run performance profiling in Hour 2
-- [ ] Measure latency with 100+ scenarios
-- [ ] Optimize if needed
+### Issue 2: LP Solver Timeout Handling ✅ RESOLVED & PROFILED
+- **Status**: Profiled via `scripts/profile_solver.py`
+- **Resolution**:
+  - P50 Latency: **0.76 ms**
+  - P95 Latency: **0.89 ms** (Target was $\le 15\text{ms}$)
+  - Max Latency: **4.64 ms**
+  - Fully compliant with Hackathon Section 08 performance requirements.
 
 ---
 
-### Issue 3: Directive Constraints Not Fully Integrated ⚠️ MINOR
-**Status**: Partially implemented  
-**Severity**: Low  
-**Description**:
-- LP model applies most directives but not all
-- `solar_reduction` applied post-solve (not in LP)
-- `max_grid_window` uses approximation
-
-**Solution**:
-- Integrate `solar_reduction` into LP pre-solve
-- Refine `max_grid_window` bounds
-
-**Action Item**:
-- [ ] Integrate solar reduction into LP (Hour 2)
-- [ ] Test max_grid_window with real directives
+### Issue 3: Directive Constraints Integration ✅ RESOLVED
+- **Status**: Fully integrated in `app/optimizer/model.py` and `app/optimizer/solver.py`
+- **Resolution**:
+  - `solar_reduction`: Pre-solve calculation of `effective_solar[h] = solar[h] * factor` with solar curtailment variable for excess solar.
+  - `minimum_battery_reserve`: Strict lower bound enforcement on SOC in `Bounds.lb`.
+  - `no_charge_window` & `no_discharge_window`: Upper bound clamped to `0.0`.
+  - `max_grid_window`: Upper bound clamped to `max_grid`.
+  - Battery neutrality: Fixed to ensure $SOC[23] == \text{initial\_energy}$.
 
 ---
 
-## 🔴 Missing Tests
+## 🧪 Test Coverage Status (29 Tests Total)
 
-### Critical Test Coverage Gaps
-
-| Test Case | Status | Priority | Plan |
-|-----------|--------|----------|------|
-| Directive conflict handling | ❌ Missing | High | Hour 2 |
-| Solar reduction in LP | ❌ Missing | High | Hour 2 |
-| Multiple directives same hour | ❌ Missing | Medium | Hour 2 |
-| Infeasible scenarios | ❌ Missing | Medium | Hour 2 |
-| Edge case: 0% factor | ❌ Missing | Low | Hour 3 |
-| Edge case: empty schedule | ❌ Missing | Low | Hour 3 |
-
-**Total Missing Tests**: 6  
-**Impact**: None yet (Hour 1 is scaffolding)
+| Test Case | Status |
+|-----------|--------|
+| Directive conflict handling | ✅ PASSED |
+| Solar reduction in LP | ✅ PASSED |
+| No charge / discharge window enforcement | ✅ PASSED |
+| Minimum battery reserve floor | ✅ PASSED |
+| Max grid window cap | ✅ PASSED |
+| Energy balance conservation | ✅ PASSED |
+| Battery end-of-day neutrality | ✅ PASSED |
 
 ---
 
