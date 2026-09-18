@@ -42,7 +42,9 @@ class TestEnergyBalance:
                 )
                 outflow = hours[h].demand + plan_item.battery_charge_kwh
                 # Allow small numerical tolerance
-                assert abs(inflow - outflow) < 0.1, f"Hour {h}: imbalance {inflow - outflow}"
+                assert (
+                    abs(inflow - outflow) < 0.1
+                ), f"Hour {h}: imbalance {inflow - outflow}"
 
 
 class TestBatteryBounds:
@@ -158,7 +160,7 @@ class TestScheduleCompleteness:
 
         schedule, _ = solve_energy_schedule(hours, battery, [])
 
-        valid_actions = {'charge', 'discharge', 'idle'}
+        valid_actions = {"charge", "discharge", "idle"}
         for plan_item in schedule:
             assert plan_item.action in valid_actions
 
@@ -223,5 +225,5 @@ class TestChargeLikelyWithSurplus:
             assert total_charge > 0.1
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

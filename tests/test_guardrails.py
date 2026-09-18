@@ -16,7 +16,7 @@ class TestHourValidation:
         """Hours should be sorted ascending."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[23, 5, 10],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -31,7 +31,7 @@ class TestHourValidation:
         """Duplicate hours should be removed."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 10, 5, 5, 10],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -44,7 +44,7 @@ class TestHourValidation:
         """Hours outside [0, 23] should be dropped."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[-1, 5, 25, 12, 24],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -57,7 +57,7 @@ class TestHourValidation:
         """If no valid hours remain, mark as not applying."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[-5, -1, 25, 30],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -75,7 +75,7 @@ class TestFactorValidation:
         """Factor > 1.0 should be clamped to 1.0."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 11, 12],
             raw_numeric_param=1.5,
             explanation="Test",
@@ -89,7 +89,7 @@ class TestFactorValidation:
         """Factor < 0.0 should be clamped to 0.0."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 11, 12],
             raw_numeric_param=-0.3,
             explanation="Test",
@@ -103,7 +103,7 @@ class TestFactorValidation:
         """Factor in [0.0, 1.0] should be unchanged."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 11, 12],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -121,7 +121,7 @@ class TestBatteryReserveValidation:
         """Reserve within capacity should be valid."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='minimum_battery_reserve',
+            directive_type="minimum_battery_reserve",
             raw_hours=None,
             raw_numeric_param=0.5,  # 50% of 50 kWh = 25 kWh
             explanation="Test",
@@ -135,7 +135,7 @@ class TestBatteryReserveValidation:
         """Reserve > capacity should fall back."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='minimum_battery_reserve',
+            directive_type="minimum_battery_reserve",
             raw_hours=None,
             raw_numeric_param=1.2,  # 120% of 50 kWh = 60 kWh > 50 kWh
             explanation="Test",
@@ -152,12 +152,12 @@ class TestDirectiveTypeValidation:
     def test_valid_directive_types(self):
         """All 6 valid types should pass."""
         valid_types = [
-            'solar_reduction',
-            'minimum_battery_reserve',
-            'no_charge_window',
-            'no_discharge_window',
-            'max_grid_window',
-            'no_op',
+            "solar_reduction",
+            "minimum_battery_reserve",
+            "no_charge_window",
+            "no_discharge_window",
+            "max_grid_window",
+            "no_op",
         ]
 
         for dtype in valid_types:
@@ -171,14 +171,14 @@ class TestDirectiveTypeValidation:
             )
             result = validate_and_guardrail_directives([raw], 1, 50.0)
             # no_op always has applies=False by design
-            if dtype != 'no_op':
+            if dtype != "no_op":
                 assert result[0].applies is True, f"Failed for type: {dtype}"
 
     def test_invalid_directive_type(self):
         """Unknown directive type should fall back."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='invalid_type',
+            directive_type="invalid_type",
             raw_hours=[10, 11, 12],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -196,7 +196,7 @@ class TestConfidenceValidation:
         """Confidence >= CONFIDENCE_THRESHOLD should pass."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 11, 12],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -209,7 +209,7 @@ class TestConfidenceValidation:
         """Confidence < CONFIDENCE_THRESHOLD should fall back."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, 11, 12],
             raw_numeric_param=0.5,
             explanation="Test",
@@ -227,7 +227,7 @@ class TestNoOpDirective:
         """no_op should never apply."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='no_op',
+            directive_type="no_op",
             raw_hours=None,
             raw_numeric_param=None,
             explanation="Test",
@@ -249,7 +249,7 @@ class TestNeverCrash:
         """None hours should be handled gracefully."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=None,
             raw_numeric_param=0.5,
             explanation="Test",
@@ -264,7 +264,7 @@ class TestNeverCrash:
         """Invalid hour types should be filtered."""
         raw = RawDirectiveDTO(
             note_index=0,
-            directive_type='solar_reduction',
+            directive_type="solar_reduction",
             raw_hours=[10, "invalid", 12.5, None, 20],  # type: ignore
             raw_numeric_param=0.5,
             explanation="Test",
@@ -275,5 +275,5 @@ class TestNeverCrash:
         assert result[0].hours == [10, 20]
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

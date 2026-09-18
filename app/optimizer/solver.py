@@ -7,7 +7,6 @@ into HourlyPlanItem format.
 """
 
 import time
-import numpy as np
 from typing import List, Tuple
 from scipy.optimize import linprog
 
@@ -63,11 +62,9 @@ def solve_energy_schedule(
             A_eq=A_eq,
             b_eq=b_eq,
             bounds=bounds,
-            method='highs',
-            options={'disp': False, 'time_limit': SOLVER_TIMEOUT_MS / 1000.0},
+            method="highs",
+            options={"disp": False, "time_limit": SOLVER_TIMEOUT_MS / 1000.0},
         )
-
-        elapsed_ms = (time.time() - start_time) * 1000
 
         # === Check if feasible ===
         if not result.success:
@@ -75,7 +72,7 @@ def solve_energy_schedule(
             empty_schedule = [
                 HourlyPlanItem(
                     hour=h,
-                    action='idle',
+                    action="idle",
                     grid_draw_kwh=0.0,
                     battery_discharge_kwh=0.0,
                     battery_charge_kwh=0.0,
@@ -93,22 +90,21 @@ def solve_energy_schedule(
             grid_draw = x_opt[3 * h + 0]
             charge = x_opt[3 * h + 1]
             discharge = x_opt[3 * h + 2]
-            soc = x_opt[72 + h]
 
             # Determine action
             if charge > 0.01:
-                action = 'charge'
+                action = "charge"
             elif discharge > 0.01:
-                action = 'discharge'
+                action = "discharge"
             else:
-                action = 'idle'
+                action = "idle"
 
             # Apply solar reductions from directives
             solar = hours[h].solar_generation
             for directive in validated_directives:
                 if (
                     directive.applies
-                    and directive.directive_type == 'solar_reduction'
+                    and directive.directive_type == "solar_reduction"
                     and h in directive.hours
                 ):
                     solar *= 1.0 - directive.factor
@@ -125,12 +121,12 @@ def solve_energy_schedule(
 
         return schedule, True
 
-    except Exception as e:
+    except Exception:
         # Error during solving: return empty schedule and False
         empty_schedule = [
             HourlyPlanItem(
                 hour=h,
-                action='idle',
+                action="idle",
                 grid_draw_kwh=0.0,
                 battery_discharge_kwh=0.0,
                 battery_charge_kwh=0.0,

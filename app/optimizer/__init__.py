@@ -7,4 +7,4 @@ This module formulates and solves the LP problem to generate a cost-minimized
 
 from .solver import solve_energy_schedule
 
-__all__ = ['solve_energy_schedule']
+__all__ = ["solve_energy_schedule"]

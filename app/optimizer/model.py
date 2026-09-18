@@ -11,7 +11,7 @@ The problem is set up here; actual solving happens in solver.py.
 
 import numpy as np
 from typing import Tuple, List
-from scipy.optimize import linprog, LinearConstraint, Bounds
+from scipy.optimize import Bounds
 
 from app.core.schemas import HourData, BatterySpec, DirectiveInterpretation
 
@@ -131,7 +131,7 @@ def setup_lp_problem(
         if not directive.applies:
             continue
 
-        if directive.directive_type == 'no_charge_window':
+        if directive.directive_type == "no_charge_window":
             # Charge = 0 in specified hours
             for h in directive.hours:
                 row = np.zeros(n_total_vars)
@@ -139,7 +139,7 @@ def setup_lp_problem(
                 A_ub_list.append(row)
                 b_ub_list.append(0.0)
 
-        elif directive.directive_type == 'no_discharge_window':
+        elif directive.directive_type == "no_discharge_window":
             # Discharge = 0 in specified hours
             for h in directive.hours:
                 row = np.zeros(n_total_vars)
@@ -147,7 +147,7 @@ def setup_lp_problem(
                 A_ub_list.append(row)
                 b_ub_list.append(0.0)
 
-        elif directive.directive_type == 'minimum_battery_reserve':
+        elif directive.directive_type == "minimum_battery_reserve":
             # SOC[h] >= factor * capacity for all h
             reserve_kwh = directive.factor * battery.capacity
             for h in range(n_hours):
@@ -158,9 +158,11 @@ def setup_lp_problem(
                 # Note: We want SOC >= reserve, which is -SOC <= -reserve in standard form
                 # But we'll handle this differently in the bounds
 
-        elif directive.directive_type == 'max_grid_window':
+        elif directive.directive_type == "max_grid_window":
             # Grid draw capped in specified hours
-            max_grid = directive.factor * battery.max_discharge_rate * 10  # Approx max grid
+            max_grid = (
+                directive.factor * battery.max_discharge_rate * 10
+            )  # Approx max grid
             for h in directive.hours:
                 row = np.zeros(n_total_vars)
                 row[3 * h + 0] = 1.0  # grid[h]

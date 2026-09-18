@@ -66,7 +66,7 @@ def validate_and_guardrail_directives(
             )
 
             # === Rule 0: Handle no_op (always falls back) ===
-            if raw_dir.directive_type == 'no_op':
+            if raw_dir.directive_type == "no_op":
                 result.fallback_reason = "no_op directive: no constraint applied"
                 validated.append(result)
                 continue
@@ -85,15 +85,17 @@ def validate_and_guardrail_directives(
                 try:
                     # Clamp to [0..23], sort, deduplicate
                     hours = sorted(
-                        set(h for h in raw_dir.raw_hours if isinstance(h, int) and 0 <= h <= 23)
+                        set(
+                            h
+                            for h in raw_dir.raw_hours
+                            if isinstance(h, int) and 0 <= h <= 23
+                        )
                     )
                     result.hours = hours
 
                     # If no valid hours remain, mark as not applying
                     if not hours:
-                        result.fallback_reason = (
-                            f"No valid hours after filtering. Raw hours: {raw_dir.raw_hours}"
-                        )
+                        result.fallback_reason = f"No valid hours after filtering. Raw hours: {raw_dir.raw_hours}"
                         validated.append(result)
                         continue
                 except Exception as e:
@@ -107,11 +109,12 @@ def validate_and_guardrail_directives(
                     param = float(raw_dir.raw_numeric_param)
 
                     # For battery reserve, check BEFORE clamping
-                    if raw_dir.directive_type == 'minimum_battery_reserve':
+                    if raw_dir.directive_type == "minimum_battery_reserve":
                         reserve_kwh = param * battery_capacity
                         if reserve_kwh < 0 or reserve_kwh > battery_capacity:
                             result.fallback_reason = (
-                                f"Battery reserve {reserve_kwh:.2f} kWh exceeds capacity {battery_capacity} kWh"
+                                f"Battery reserve {reserve_kwh:.2f} kWh "
+                                f"exceeds capacity {battery_capacity} kWh"
                             )
                             validated.append(result)
                             continue
@@ -127,7 +130,7 @@ def validate_and_guardrail_directives(
                     continue
             else:
                 # None is OK; use neutral default based on directive type
-                if raw_dir.directive_type == 'minimum_battery_reserve':
+                if raw_dir.directive_type == "minimum_battery_reserve":
                     result.factor = 0.0
                 else:
                     result.factor = 1.0
@@ -135,14 +138,17 @@ def validate_and_guardrail_directives(
             # === Rule 4: Check confidence score ===
             if raw_dir.confidence < CONFIDENCE_THRESHOLD:
                 result.fallback_reason = (
-                    f"Low confidence score: {raw_dir.confidence} < {CONFIDENCE_THRESHOLD}"
+                    f"Low confidence score: {raw_dir.confidence} "
+                    f"< {CONFIDENCE_THRESHOLD}"
                 )
                 validated.append(result)
                 continue
 
             # === All validations passed ===
             result.applies = True
-            result.applied_constraint = _describe_constraint(raw_dir.directive_type, result)
+            result.applied_constraint = _describe_constraint(
+                raw_dir.directive_type, result
+            )
 
             validated.append(result)
 
@@ -176,25 +182,18 @@ def _describe_constraint(directive_type: str, result: DirectiveInterpretation) -
     hours_str = f"{{{', '.join(map(str, result.hours))}}}" if result.hours else "[]"
 
     descriptions = {
-        'solar_reduction': (
+        "solar_reduction": (
             f"Solar generation reduced by {result.factor * 100:.1f}% in hours {hours_str}"
         ),
-        'minimum_battery_reserve': (
+        "minimum_battery_reserve": (
             f"Battery reserve floor set to {result.factor * 100:.1f}% of capacity"
         ),
-        'no_charge_window': (
-            f"Battery charging prohibited in hours {hours_str}"
-        ),
-        'no_discharge_window': (
-            f"Battery discharging prohibited in hours {hours_str}"
-        ),
-        'max_grid_window': (
+        "no_charge_window": (f"Battery charging prohibited in hours {hours_str}"),
+        "no_discharge_window": (f"Battery discharging prohibited in hours {hours_str}"),
+        "max_grid_window": (
             f"Grid draw capped to {result.factor * 100:.1f}% in hours {hours_str}"
         ),
-        'no_op': "No constraint applied",
+        "no_op": "No constraint applied",
     }
 
-    return descriptions.get(
-        directive_type,
-        f"Unknown directive type: {directive_type}"
-    )
+    return descriptions.get(directive_type, f"Unknown directive type: {directive_type}")

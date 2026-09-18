@@ -7,4 +7,4 @@ safe, valid directive interpretations that can be safely consumed by the optimiz
 
 from .validator import validate_and_guardrail_directives
 
-__all__ = ['validate_and_guardrail_directives']
+__all__ = ["validate_and_guardrail_directives"]
