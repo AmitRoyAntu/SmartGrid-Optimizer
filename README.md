@@ -13,6 +13,25 @@
 
 ---
 
+## 🚀 Live Deployment
+
+> **🌐 Public Endpoint**: **<https://smartgrid-optimizer.onrender.com>**
+>
+> The service is **live and ready to test** right now — no setup, no API keys from your side.
+>
+> ```bash
+> # Probe in 5 seconds (anywhere in the world)
+> curl https://smartgrid-optimizer.onrender.com/health
+> # → {"status":"ok"}
+>
+> # Run the full benchmark suite (3 scenarios, <30s end-to-end)
+> bash scripts/run_benchmarks.sh https://smartgrid-optimizer.onrender.com
+> ```
+>
+> ⚠️ **Note**: Render free tier may cold-start (~30s) after 15 min of idle time. First request may be slow; subsequent requests are fast.
+
+---
+
 ## 📑 Table of Contents
 1. [System Architecture](#-system-architecture)
 2. [Key Innovations & Engineering Decisions](#-key-innovations--engineering-decisions)
@@ -171,6 +190,7 @@ Every parsed directive is validated through [`app/guardrails/validator.py`](app/
 ### Prerequisites
 - Docker & Docker Compose **OR** Python 3.11+ / `uv`
 - Groq API Key (Optional for fallback; recommended for live semantic interpretation)
+- Windows users: `curl.exe` is built into Windows 10/11; for bash scripts use [Git Bash](https://git-scm.com/download/win) or WSL
 
 ### Option A: Running with Docker (Recommended)
 ```bash
@@ -199,6 +219,36 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # 3. Run full automated test suite (100% pass)
 uv run --with pytest --with pytest-asyncio --with scipy --with numpy --with pydantic --with pydantic-settings --with fastapi --with httpx --with groq pytest tests/ -v
+```
+
+### Option C: Reproducing the Benchmark Suite
+
+The benchmark runner posts every scenario from `tests/sample_payloads.json` and asserts the response shape.
+
+```bash
+# POSIX (Linux, macOS, WSL, Git Bash)
+bash scripts/run_benchmarks.sh https://smartgrid-optimizer.onrender.com
+
+# Windows (CMD / PowerShell) — uses curl.exe under the hood
+scripts\run_benchmarks.bat https://smartgrid-optimizer.onrender.com
+```
+
+Expected output (3/3 passed):
+```
+[ OK  ] /health is 200
+[run-bench] Scenario: GRID-101
+  HTTP:    200
+  Latency: 1150 ms
+  Size:    6376 bytes
+PLAN_LEN:24
+TOTAL_GRID:5095.0
+TOTAL_COST:51465.0
+PEAK_GRID:410.0
+DIR_COUNT:3
+[ OK  ] GRID-101 passed
+...
+Summary: 3/3 passed, 0 failed
+[ OK  ] All benchmarks passed
 ```
 
 ---
@@ -323,8 +373,84 @@ The complete spoken presentation script with exact timestamps, speaker cues, and
 
 ---
 
+## 🛠 Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| `GET /health` hangs > 30s | Render free-tier cold start | Wait and refresh — first request after ~15 min idle takes ~30s |
+| `POST /optimize-energy` returns HTTP 422 | Payload schema mismatch | Verify field names: `scenario_id`, `operator_notes` (not `notes`), `hours` (with `demand_kwh`, `solar_kwh`, `tariff_bdt_per_kwh`), `battery` (with `capacity`/`capacity_kwh`, `initial_soc`/`initial_energy_kwh`, etc.) — the schema accepts multiple aliases |
+| `POST /optimize-energy` returns HTTP 500 | Missing `GROQ_API_KEY` in Render env | Render Dashboard → Environment → Add `GROQ_API_KEY` = your key from [console.groq.com/keys](https://console.groq.com/keys) |
+| Local Docker: port 8000 in use | Another process bound the port | `lsof -i:8000` (Linux/Mac) or `netstat -ano | findstr :8000` (Windows), then kill the PID |
+| Local Docker: `ModuleNotFoundError: app` | Container started in wrong directory | Ensure `Dockerfile` `WORKDIR /app` and `CMD` uses `app.main:app` |
+| Benchmark reports `HTTP_000` | curl couldn't reach the server | Check the URL, your network, or Render service status |
+| Benchmark reports `PARSE_ERROR` | Server returned non-JSON (likely HTML error page) | Inspect the body file in `%TEMP%\gw_<scenario>_body.json` for the actual error message |
+| `bash: scripts/run_benchmarks.sh: No such file` | Running from wrong directory | `cd` to the repo root before invoking the script |
+| `.env` changes not picked up | Docker cached the old image | `docker compose -f deploy/docker-compose.yml up --build` to force rebuild |
+| `git log` shows committed secrets | Accidental `.env` staging | Revoke the key immediately at the provider, then `git filter-repo` to scrub history, then rotate the key |
+
+### Security Checklist (run before every commit)
+
+```bash
+# 1. .env must NOT be staged
+git status | grep -E '^\s*\.env$' && echo "FAIL: .env is staged" || echo "OK"
+
+# 2. .env.example must contain ONLY placeholders
+grep -E '^GROQ_API_KEY=[^y]' .env.example && echo "FAIL: real key in .env.example" || echo "OK"
+
+# 3. Scan whole repo for likely-secret patterns
+grep -rE "(gsk_[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z_-]{30,})" --exclude-dir=.git . \
+  && echo "FAIL: secret pattern found" || echo "OK"
+```
+
+---
+
+## 🔐 Environment Variables
+
+All variables read from `.env` (git-ignored) or Render dashboard:
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GROQ_API_KEY` | ✅ Yes | — | API key from [console.groq.com/keys](https://console.groq.com/keys) |
+| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Groq model identifier |
+| `GROQ_BASE_URL` | No | `https://api.groq.com/openai/v1` | OpenAI-compatible endpoint |
+| `LLM_PROVIDER` | No | `groq` | `groq` or `mock` (for offline tests) |
+| `LLM_TIMEOUT_SEC` | No | `4.0` | Per-call timeout (rubric: p95 ≤ 5s) |
+| `LOG_LEVEL` | No | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `APP_ENV` | No | `production` | `development` / `staging` / `production` (production fails fast on missing key) |
+
+See [`.env.example`](.env.example) for a template.
+
+---
+
 ## 📜 Third-Party Attributions
 - **FastAPI**: Modern, high-performance web framework for Python.
 - **SciPy / HiGHS**: State-of-the-art open source linear programming solver.
 - **Groq Cloud API**: Ultra-fast LLM inference engine.
 - **Pydantic**: Data validation and settings management using Python type hints.
+
+---
+
+## 🔗 Quick Links
+
+| Resource | Link |
+|---|---|
+| 🌐 **Live API** | <https://smartgrid-optimizer.onrender.com> |
+| 📦 **GitHub Repo** | <https://github.com/AmitRoyAntu/SmartGrid-Optimizer> |
+| 🐳 **Dockerfile** | [`deploy/Dockerfile`](deploy/Dockerfile) |
+| 🐳 **Docker Compose** | [`deploy/docker-compose.yml`](deploy/docker-compose.yml) |
+| ⚙️ **Config** | [`app/config.py`](app/config.py) |
+| 📝 **Sample Payloads** | [`tests/sample_payloads.json`](tests/sample_payloads.json) |
+| 🧪 **Benchmark (POSIX)** | [`scripts/run_benchmarks.sh`](scripts/run_benchmarks.sh) |
+| 🧪 **Benchmark (Windows)** | [`scripts/run_benchmarks.bat`](scripts/run_benchmarks.bat) |
+| 🎥 **Video Script** | [`docs/video_script.md`](docs/video_script.md) |
+| 📋 **Member 4 Plan** | [`member4/PLAN.md`](member4/PLAN.md) |
+| 📐 **Schemas** | [`app/core/schemas.py`](app/core/schemas.py) |
+| 🧠 **LLM Client** | [`app/llm/client.py`](app/llm/client.py) |
+| 🛡 **Guardrails** | [`app/guardrails/validator.py`](app/guardrails/validator.py) |
+| 🔢 **LP Solver** | [`app/optimizer/model.py`](app/optimizer/model.py) |
+
+---
+
+<p align="center">
+  <strong>Built for BUP CSE Fest 2026 · Powered by FastAPI · Groq · HiGHS · Pydantic</strong>
+</p>
