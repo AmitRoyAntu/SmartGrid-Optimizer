@@ -12,7 +12,7 @@ from groq import AsyncGroq, APIConnectionError, APITimeoutError, RateLimitError
 # Targeting p95 <= 5s. A 2.5s timeout allows for one retry within the 5s budget.
 DEFAULT_TIMEOUT = 2.5
 MAX_RETRIES = 1
-DEFAULT_MODEL = "openai/gpt-oss-20b"
+DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Lazy-loaded client to avoid failing on import if env var is missing
 _client: Optional[AsyncGroq] = None
@@ -37,7 +37,7 @@ def get_client() -> AsyncGroq:
 async def generate_structured_extraction(
     system_prompt: str,
     user_input: str,
-    model: str = DEFAULT_MODEL
+    model: Optional[str] = None
 ) -> str:
     """
     Calls the Groq API to extract structured JSON from the user input based on the system prompt.
@@ -45,7 +45,7 @@ async def generate_structured_extraction(
     Args:
         system_prompt: The detailed system prompt with extraction rules.
         user_input: The JSON-serialized array of operator notes.
-        model: The Groq model to use. Defaults to openai/gpt-oss-20b for low latency.
+        model: The Groq model to use. Defaults to llama-3.3-70b-versatile.
         
     Returns:
         The raw JSON string returned by the LLM.
@@ -55,6 +55,7 @@ async def generate_structured_extraction(
         Exception: Passes through non-transient API errors (e.g., Auth errors).
     """
     client = get_client()
+    target_model = model or os.environ.get("GROQ_MODEL", DEFAULT_MODEL)
     
     for attempt in range(MAX_RETRIES + 1):
         try:
@@ -63,7 +64,7 @@ async def generate_structured_extraction(
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input}
                 ],
-                model=model,
+                model=target_model,
                 response_format={"type": "json_object"},
                 temperature=0.0, # Ensures deterministic structured extraction
             )
