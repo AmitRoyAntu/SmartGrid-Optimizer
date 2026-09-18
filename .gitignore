@@ -122,3 +122,11 @@ $RECYCLE.BIN/
 ._*
 .Spotlight-V100
 .Trashes
+
+# ==============================================================================
+# 9. INTERNAL WORKSPACES, SCRATCHPADS & TEMPORARY DOCS
+# ==============================================================================
+member3_workspace/
+member4/
+docs/
+implementation_plan.md
