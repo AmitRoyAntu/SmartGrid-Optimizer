@@ -317,10 +317,6 @@ curl -X POST http://localhost:8000/optimize-energy \
 - **Member 3 (Guardrails & Optimization)**: Deterministic parameter clamping, HiGHS LP formulation, Physics constraints.
 - **Member 4 (DevOps & Presentation)**: Docker configuration, benchmark suites, documentation, 3-minute video presentation script.
 
-### 🎥 3-Minute Video Presentation Script
-The complete spoken presentation script with exact timestamps, speaker cues, and slide visual descriptions is available at:
-👉 **[`docs/video_script.md`](docs/video_script.md)** *(Strictly adheres to $< 3:00$ duration requirement).*
-
 ---
 
 ## 📜 Third-Party Attributions
