@@ -1,5 +1,5 @@
 """
-Pipeline Orchestrator (Hour 3 Integration).
+Pipeline Orchestrator (Member 1 Core Deliverable).
 Coordinates the complete end-to-end workflow:
 LLM Directives -> Deterministic Guardrails -> Mathematical Optimization -> Verification Replay.
 """
@@ -11,8 +11,8 @@ from app.core.schemas import (
     HourlyPlanItem,
     RawDirectiveDTO,
     DirectiveInterpretation,
-    DirectiveInterpretationResponse,
 )
+from app.llm.interpreter import interpret_operator_notes
 from app.guardrails.validator import validate_and_guardrail_directives
 from app.optimizer.solver import solve_energy_schedule
 from app.core.replayer import replay_and_calculate_metrics
@@ -21,26 +21,60 @@ from app.core.replayer import replay_and_calculate_metrics
 async def orchestrate(request: OptimizeEnergyRequest) -> OptimizeEnergyResponse:
     """
     Orchestrates the 24-hour campus energy scheduling pipeline.
-    """
-    # 1. Collect / Parse raw directives from operator notes
-    # (Safe fallback to no_op if LLM module is not yet wired)
-    raw_directives: List[RawDirectiveDTO] = []
-    for idx, note in enumerate(request.operator_notes):
-        raw_directives.append(
-            RawDirectiveDTO(
-                note_index=idx,
-                directive_type="no_op",
-                raw_hours=None,
-                raw_numeric_param=None,
-                explanation=f"Interpreted operator note: '{note}'",
-                confidence=1.0,
-            )
-        )
 
-    # 2. Apply deterministic guardrails (Member 3)
+    Workflow:
+    1. LLM Semantic Interpretation: Extract structured raw directives from operator notes.
+    2. Deterministic Guardrails: Normalize hours, clamp factors, enforce safe fallbacks.
+    3. Mathematical Optimization: Solve cost-minimizing LP schedule with HiGHS.
+    4. Hourly State Dynamics: Track running battery state of charge (SOC).
+    5. Replay Verification: Validate energy balance & end-of-day battery neutrality.
+    6. Response Construction: Emit canonical Section 10.1 & 10.2 JSON output.
+    """
+    notes_count = len(request.operator_notes)
+
+    # 1. Semantic Operator Note Interpretation via LLM (Member 2)
+    raw_directives: List[RawDirectiveDTO] = []
+    if request.operator_notes:
+        try:
+            raw_directives = await interpret_operator_notes(
+                notes=request.operator_notes,
+                scenario_id=request.scenario_id,
+            )
+        except Exception as e:
+            # Resilient fallback: If LLM is unreachable, times out, or missing API key,
+            # never crash with HTTP 500. Generate safe no_op fallbacks for every note.
+            raw_directives = [
+                RawDirectiveDTO(
+                    note_index=idx,
+                    directive_type="no_op",
+                    raw_hours=None,
+                    raw_numeric_param=None,
+                    explanation=f"LLM fallback due to provider error: {str(e)[:100]}",
+                    confidence=0.0,
+                )
+                for idx, note in enumerate(request.operator_notes)
+            ]
+
+    # Guarantee complete 0..N-1 indexing per Section 5.1
+    existing_indices = {d.note_index for d in raw_directives}
+    for idx in range(notes_count):
+        if idx not in existing_indices:
+            raw_directives.append(
+                RawDirectiveDTO(
+                    note_index=idx,
+                    directive_type="no_op",
+                    raw_hours=None,
+                    raw_numeric_param=None,
+                    explanation=f"No directive extracted for note: '{request.operator_notes[idx]}'",
+                    confidence=0.0,
+                )
+            )
+    raw_directives.sort(key=lambda d: d.note_index)
+
+    # 2. Deterministic Guardrails (Member 3)
     validated_directives = validate_and_guardrail_directives(
         raw_directives=raw_directives,
-        notes_count=len(request.operator_notes),
+        notes_count=notes_count,
         battery_capacity=request.battery.capacity,
     )
 
@@ -86,17 +120,29 @@ async def orchestrate(request: OptimizeEnergyRequest) -> OptimizeEnergyResponse:
     metrics = replay_and_calculate_metrics(
         hourly_plan=hourly_plan,
         hours=request.hours,
+        initial_energy_kwh=initial_energy,
+        battery_capacity=request.battery.capacity,
     )
 
-    # 6. Validated directives match Problem Statement Section 10.2 schema
-    directive_responses: List[DirectiveInterpretation] = validated_directives
+    # 6. Construct plan summary description
+    active_directives = [d.directive_type for d in validated_directives if d.applies]
+    summary_suffix = (
+        f" Enforced directives: {', '.join(active_directives)}."
+        if active_directives
+        else " No operational directive constraints active."
+    )
+    plan_summary = (
+        f"Optimized 24h schedule with {metrics.total_grid_kwh:.2f} kWh total grid import "
+        f"at {metrics.total_cost_bdt:.2f} BDT cost (peak import {metrics.peak_grid_kwh:.2f} kWh)."
+        + summary_suffix
+    )
 
     return OptimizeEnergyResponse(
         scenario_id=request.scenario_id,
-        directive_interpretation=directive_responses,
+        directive_interpretation=validated_directives,
         hourly_plan=hourly_plan,
         total_grid_kwh=round(metrics.total_grid_kwh, 2),
         total_cost_bdt=round(metrics.total_cost_bdt, 2),
         peak_grid_kwh=round(metrics.peak_grid_kwh, 2),
-        plan_summary=f"Optimized 24h schedule with {metrics.total_grid_kwh:.2f} kWh total grid import at {metrics.total_cost_bdt:.2f} BDT cost.",
+        plan_summary=plan_summary,
     )
