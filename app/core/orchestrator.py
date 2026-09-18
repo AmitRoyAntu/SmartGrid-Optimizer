@@ -24,7 +24,9 @@ async def orchestrate(request: OptimizeEnergyRequest) -> OptimizeEnergyResponse:
 
     metrics = replay_and_calculate_metrics(
         hourly_plan,
-        request.hours
+        request.hours,
+        request.battery,
+        []
     )
 
     return OptimizeEnergyResponse(
