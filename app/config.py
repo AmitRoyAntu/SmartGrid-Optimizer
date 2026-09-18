@@ -38,8 +38,8 @@ class Settings(BaseSettings):
         description="Groq API key. Get one at https://console.groq.com/keys",
     )
     GROQ_MODEL: str = Field(
-        default="llama-3.3-70b-versatile",
-        description="Groq model identifier. Swap to llama-3.1-8b-instant if 70b is rate-limited.",
+        default="openai/gpt-oss-20b",
+        description="Groq model identifier. Defaults to openai/gpt-oss-20b.",
     )
     GROQ_BASE_URL: str = Field(
         default="https://api.groq.com/openai/v1",
@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     def _known_model(cls, v: str) -> str:
         # Soft warning — Groq deprecates models often. We don't crash, just log.
         known = {
+            "openai/gpt-oss-20b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
             "llama-3.1-70b-versatile",
