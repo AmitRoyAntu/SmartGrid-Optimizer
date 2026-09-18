@@ -65,6 +65,12 @@ def validate_and_guardrail_directives(
                 fallback_reason=None,
             )
 
+            # === Rule 0: Handle no_op (always falls back) ===
+            if raw_dir.directive_type == 'no_op':
+                result.fallback_reason = "no_op directive: no constraint applied"
+                validated.append(result)
+                continue
+
             # === Rule 1: Validate directive type ===
             if raw_dir.directive_type not in VALID_DIRECTIVE_TYPES:
                 result.fallback_reason = (
@@ -99,6 +105,17 @@ def validate_and_guardrail_directives(
             if raw_dir.raw_numeric_param is not None:
                 try:
                     param = float(raw_dir.raw_numeric_param)
+
+                    # For battery reserve, check BEFORE clamping
+                    if raw_dir.directive_type == 'minimum_battery_reserve':
+                        reserve_kwh = param * battery_capacity
+                        if reserve_kwh < 0 or reserve_kwh > battery_capacity:
+                            result.fallback_reason = (
+                                f"Battery reserve {reserve_kwh:.2f} kWh exceeds capacity {battery_capacity} kWh"
+                            )
+                            validated.append(result)
+                            continue
+
                     # Clamp to [0.0, 1.0]
                     result.factor = max(0.0, min(1.0, param))
                 except (ValueError, TypeError):
@@ -122,17 +139,6 @@ def validate_and_guardrail_directives(
                 )
                 validated.append(result)
                 continue
-
-            # === Rule 5: Type-specific validation ===
-            if raw_dir.directive_type == 'minimum_battery_reserve':
-                # Reserve in kWh = factor * capacity
-                reserve_kwh = result.factor * battery_capacity
-                if reserve_kwh < 0 or reserve_kwh > battery_capacity:
-                    result.fallback_reason = (
-                        f"Battery reserve {reserve_kwh} kWh exceeds capacity {battery_capacity} kWh"
-                    )
-                    validated.append(result)
-                    continue
 
             # === All validations passed ===
             result.applies = True
