@@ -1,0 +1,124 @@
+# ==============================================================================
+# 1. SECRETS & CREDENTIALS (CRITICAL: PENALTY IN EVALUATION)
+# ==============================================================================
+.env
+.env.*
+*.env
+secrets/
+*.pem
+*.key
+*.cert
+*.pfx
+credentials.json
+!.env.example
+
+# ==============================================================================
+# 2. PYTHON BYTECODE & COMPILED FILES
+# ==============================================================================
+__pycache__/
+**/__pycache__/
+*/**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*.[oa]
+*.so
+*$py.class
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ==============================================================================
+# 3. VIRTUAL ENVIRONMENTS
+# ==============================================================================
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.env.virtualenv/
+.envrc
+
+# ==============================================================================
+# 4. TESTING, COVERAGE & LINTER CACHES
+# ==============================================================================
+.pytest_cache/
+**/__pycache__-pytest*
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+cover/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# ==============================================================================
+# 5. IDE & EDITOR CONFIGURATIONS
+# ==============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ==============================================================================
+# 6. LOGS & RUNTIME ARTIFACTS
+# ==============================================================================
+*.log
+logs/
+*.pid
+deploy/*.tar
+deploy/*.gz
+deploy/*.sock
+
+# ==============================================================================
+# 7. OPTIMIZATION SOLVER DUMPS
+# ==============================================================================
+*.lp
+*.mps
+*.sol
+*.stdout
+
+# ==============================================================================
+# 8. OPERATING SYSTEM ARTIFACTS (Windows & macOS)
+# ==============================================================================
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
