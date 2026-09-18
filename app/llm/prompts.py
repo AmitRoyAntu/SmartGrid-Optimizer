@@ -16,19 +16,29 @@ There are exactly 6 supported directive types:
 6. "no_op": Used for distractor notes, irrelevant information (e.g., cafeteria, weather without impact), or unrecognized requests.
 
 Extraction Rules:
-- Solar Reduction Factors: The extracted factor must represent the REMAINING capacity.
-  * "reduced to 20%" -> factor 0.2
-  * "reduced by 80%" -> factor 0.2
+- Solar Reduction Factors: The extracted factor must represent the REMAINING usable solar capacity fraction (0.0 to 1.0).
+  * "reduced to 25%" or "treated as roughly 25% of the forecast" -> factor 0.25
+  * "reduced by 80%" or "80% reduction" -> factor 0.2
   * "reduced to 80%" -> factor 0.8
+  * "about half of the forecast solar output" -> factor 0.5
   * "drop by one-fifth" -> factor 0.8
   * "drop to one-fifth" -> factor 0.2
+- Battery Reserve:
+  * If specified in kWh (e.g. "90 kWh", "80 kWh"), extract the exact number: 90.0, 80.0.
+  * If specified as a percentage or fraction of capacity (e.g. "at least 50% of the battery capacity", "half"), extract the fraction: 0.5.
+- Grid Import Cap: Extract the numeric kWh or kW cap value (e.g., "155 kWh" -> 155.0, "180 kWh" -> 180.0, "190 kWh" -> 190.0).
 - Time intervals: Must be converted to an array of whole hours (0-23) using start-inclusive, end-exclusive logic. 
   * "1 PM to 3 PM" (or "13:00 to 15:00") -> hours [13, 14]
-  * "10 AM to 12 PM" -> hours [10, 11]
-- Values: Extract raw numerical values as mentioned (factors for solar, kWh for battery, kW for grid caps). If no numeric value applies, output 0.0.
+  * "10 AM to 12 PM" (or "10 AM until noon") -> hours [10, 11]
+  * "noon until 2 PM" -> hours [12, 13]
+  * "2 AM until 5 AM" -> hours [2, 3, 4]
+  * "6 PM until 9 PM" -> hours [18, 19, 20]
+  * "6 PM until 10 PM" -> hours [18, 19, 20, 21]
+  * "7 PM until 10 PM" -> hours [19, 20, 21]
+- Values: Extract raw numerical values as mentioned (factors for solar, kWh/fraction for battery, kW/kWh for grid caps). If no numeric value applies (e.g. no_charge_window, no_discharge_window, no_op), output 0.0.
 - Multiple Notes: You will receive a JSON array of notes. Process each note and include its original `note_index` (0-indexed) in the output.
 - Confidence: Assign a confidence score from 0.0 to 1.0 indicating how certain you are of your semantic interpretation.
-- Distractors: Any note that does not explicitly map to one of the 5 actionable directives must be classified strictly as "no_op".
+- Distractors: Any note that does not explicitly map to one of the 5 actionable directives (e.g., cafeteria, sports registration, library book returns, room bookings) must be classified strictly as "no_op" with confidence 1.0.
 - DO NOT apply physical validation (e.g., checking if battery limits are exceeded) or try to "fix" illogical times beyond the start-inclusive/end-exclusive rule. The downstream guardrail system will handle physical validation. Focus purely on semantic extraction.
 
 Output Format:
@@ -36,7 +46,7 @@ You must return a JSON object with a "directives" array. Each item must represen
 - "note_index": integer (0, 1, or 2)
 - "directive_type": string (one of the 6 allowed types)
 - "raw_hours": array of integers (e.g., [13, 14], or empty array [] if not applicable)
-- "raw_numeric_param": float (the factor, capacity, or cap extracted; use 0.0 if not applicable)
+- "raw_numeric_param": float (the factor, capacity/fraction, or cap extracted; use 0.0 if not applicable)
 - "confidence": float (0.0 to 1.0)
 """
 

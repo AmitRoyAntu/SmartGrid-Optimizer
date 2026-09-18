@@ -43,6 +43,8 @@ async def orchestrate(request: OptimizeEnergyRequest) -> OptimizeEnergyResponse:
         except Exception as e:
             # Resilient fallback: If LLM is unreachable, times out, or missing API key,
             # never crash with HTTP 500. Generate safe no_op fallbacks for every note.
+            import logging
+            logging.getLogger("gridwise").error("LLM interpretation failed: %s", e, exc_info=True)
             raw_directives = [
                 RawDirectiveDTO(
                     note_index=idx,

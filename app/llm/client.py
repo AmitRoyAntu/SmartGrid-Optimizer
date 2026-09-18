@@ -9,10 +9,9 @@ from typing import Optional
 from groq import AsyncGroq, APIConnectionError, APITimeoutError, RateLimitError
 
 # Constants for latency and reliability management
-# Targeting p95 <= 5s. A 2.5s timeout allows for one retry within the 5s budget.
-DEFAULT_TIMEOUT = 2.5
-MAX_RETRIES = 1
-DEFAULT_MODEL = "openai/gpt-oss-20b"
+DEFAULT_TIMEOUT = float(os.environ.get("LLM_TIMEOUT_SEC", 8.0))
+MAX_RETRIES = 2
+DEFAULT_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 # Lazy-loaded client to avoid failing on import if env var is missing
 _client: Optional[AsyncGroq] = None
@@ -72,8 +71,19 @@ async def generate_structured_extraction(
                 temperature=0.0, # Ensures deterministic structured extraction
             )
             return response.choices[0].message.content
-        except (APIConnectionError, APITimeoutError, RateLimitError) as e:
+        except RateLimitError as e:
             if attempt == MAX_RETRIES:
                 raise RuntimeError(f"Groq API failed after {MAX_RETRIES + 1} attempts: {str(e)}") from e
-            # Lightweight backoff (0.5s) for transient errors to preserve overall latency target
+            wait_time = 2.5
+            err_msg = str(e)
+            if "try again in " in err_msg:
+                try:
+                    sec_str = err_msg.split("try again in ")[1].split("s")[0]
+                    wait_time = float(sec_str) + 0.5
+                except Exception:
+                    wait_time = 2.5
+            await asyncio.sleep(wait_time)
+        except (APIConnectionError, APITimeoutError) as e:
+            if attempt == MAX_RETRIES:
+                raise RuntimeError(f"Groq API failed after {MAX_RETRIES + 1} attempts: {str(e)}") from e
             await asyncio.sleep(0.5)

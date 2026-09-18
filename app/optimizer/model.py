@@ -121,6 +121,8 @@ def setup_lp_problem(
     lb = np.zeros(n_total_vars)
     ub = np.inf * np.ones(n_total_vars)
 
+    min_energy = getattr(battery, "minimum_energy_kwh", 0.0) or 0.0
+
     for h in range(n_hours):
         # Charge rate limit
         ub[n_vars_per_hour * h + 1] = battery.max_charge_rate
@@ -128,7 +130,8 @@ def setup_lp_problem(
         ub[n_vars_per_hour * h + 2] = battery.max_discharge_rate
         # Curtailment bound: can at most curtail available effective solar
         ub[n_vars_per_hour * h + 3] = max(0.0, effective_solar[h])
-        # Battery capacity bound
+        # Battery bounds (capacity and baseline minimum reserve)
+        lb[soc_offset + h] = min_energy
         ub[soc_offset + h] = battery.capacity
 
     # === Apply directive constraints directly to bounds and inequalities ===

@@ -195,6 +195,9 @@ def validate_and_guardrail_directives(
                     continue
                 try:
                     reserve_kwh = float(raw_dir.raw_numeric_param)
+                    # Support percentage/fraction of battery capacity (e.g., 0.5 -> 50% of capacity)
+                    if 0.0 < reserve_kwh <= 1.0 and battery_capacity > 0:
+                        reserve_kwh = reserve_kwh * battery_capacity
                 except (ValueError, TypeError):
                     validated.append(
                         DirectiveInterpretation(
@@ -223,13 +226,14 @@ def validate_and_guardrail_directives(
                     )
                     continue
 
+                clean_reserve = int(round(reserve_kwh)) if abs(round(reserve_kwh) - reserve_kwh) < 1e-4 else round(reserve_kwh, 4)
                 validated.append(
                     DirectiveInterpretation(
                         note_index=raw_dir.note_index,
                         applies=True,
                         directive_type="minimum_battery_reserve",
-                        structured_adjustment={"hours": hours, "minimum_energy_kwh": round(reserve_kwh, 4)},
-                        explanation=raw_dir.explanation or f"Battery reserve floor set to {reserve_kwh:.2f} kWh in hours {hours}",
+                        structured_adjustment={"hours": hours, "minimum_energy_kwh": clean_reserve},
+                        explanation=raw_dir.explanation or f"Battery reserve floor set to {clean_reserve} kWh in hours {hours}",
                     )
                 )
 
@@ -271,13 +275,14 @@ def validate_and_guardrail_directives(
                     )
                     continue
 
+                clean_max_grid = int(round(max_grid_kwh)) if abs(round(max_grid_kwh) - max_grid_kwh) < 1e-4 else round(max_grid_kwh, 4)
                 validated.append(
                     DirectiveInterpretation(
                         note_index=raw_dir.note_index,
                         applies=True,
                         directive_type="max_grid_window",
-                        structured_adjustment={"hours": hours, "max_grid_kwh": round(max_grid_kwh, 4)},
-                        explanation=raw_dir.explanation or f"Grid draw capped to {max_grid_kwh:.2f} kWh in hours {hours}",
+                        structured_adjustment={"hours": hours, "max_grid_kwh": clean_max_grid},
+                        explanation=raw_dir.explanation or f"Grid draw capped to {clean_max_grid} kWh in hours {hours}",
                     )
                 )
 
