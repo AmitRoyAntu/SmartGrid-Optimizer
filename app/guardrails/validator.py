@@ -102,6 +102,12 @@ def validate_and_guardrail_directives(
                     result.fallback_reason = f"Error parsing hours: {str(e)}"
                     validated.append(result)
                     continue
+            else:
+                # Directives like minimum_battery_reserve with no hours apply to all 24 hours
+                if raw_dir.directive_type == "minimum_battery_reserve":
+                    result.hours = list(range(24))
+                else:
+                    result.hours = []
 
             # === Rule 3: Validate and clamp factor ===
             if raw_dir.raw_numeric_param is not None:
