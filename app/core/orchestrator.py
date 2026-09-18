@@ -88,10 +88,8 @@ async def orchestrate(request: OptimizeEnergyRequest) -> OptimizeEnergyResponse:
         hours=request.hours,
     )
 
-    # 6. Format directive interpretations according to Section 10.2 schema
-    directive_responses: List[DirectiveInterpretationResponse] = [
-        d.to_api_response() for d in validated_directives
-    ]
+    # 6. Validated directives match Problem Statement Section 10.2 schema
+    directive_responses: List[DirectiveInterpretation] = validated_directives
 
     return OptimizeEnergyResponse(
         scenario_id=request.scenario_id,

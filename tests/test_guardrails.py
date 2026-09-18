@@ -118,31 +118,35 @@ class TestBatteryReserveValidation:
     """Test battery reserve constraints."""
 
     def test_reserve_within_capacity(self):
-        """Reserve within capacity should be valid."""
+        """Reserve within capacity should be valid and use minimum_energy_kwh."""
         raw = RawDirectiveDTO(
             note_index=0,
             directive_type="minimum_battery_reserve",
             raw_hours=None,
-            raw_numeric_param=0.5,  # 50% of 50 kWh = 25 kWh
+            raw_numeric_param=25.0,  # 25 kWh <= 50 kWh
             explanation="Test",
             confidence=0.9,
         )
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         assert result[0].applies is True
-        assert result[0].factor == 0.5
+        assert result[0].directive_type == "minimum_battery_reserve"
+        assert result[0].structured_adjustment is not None
+        assert result[0].structured_adjustment["minimum_energy_kwh"] == 25.0
 
     def test_reserve_exceeds_capacity(self):
-        """Reserve > capacity should fall back."""
+        """Reserve > capacity should fall back to no_op with structured_adjustment=None."""
         raw = RawDirectiveDTO(
             note_index=0,
             directive_type="minimum_battery_reserve",
             raw_hours=None,
-            raw_numeric_param=1.2,  # 120% of 50 kWh = 60 kWh > 50 kWh
+            raw_numeric_param=60.0,  # 60 kWh > 50 kWh capacity
             explanation="Test",
             confidence=0.9,
         )
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         assert result[0].applies is False
+        assert result[0].directive_type == "no_op"
+        assert result[0].structured_adjustment is None
         assert "exceeds capacity" in result[0].fallback_reason
 
 
@@ -150,7 +154,7 @@ class TestDirectiveTypeValidation:
     """Test directive type validation."""
 
     def test_valid_directive_types(self):
-        """All 6 valid types should pass."""
+        """All 6 valid types should pass and produce canonical structure."""
         valid_types = [
             "solar_reduction",
             "minimum_battery_reserve",
@@ -161,21 +165,32 @@ class TestDirectiveTypeValidation:
         ]
 
         for dtype in valid_types:
+            param = 0.5
+            if dtype == "minimum_battery_reserve":
+                param = 25.0
+            elif dtype == "max_grid_window":
+                param = 35.0
+
             raw = RawDirectiveDTO(
                 note_index=0,
                 directive_type=dtype,
                 raw_hours=[10, 11],
-                raw_numeric_param=0.5,
+                raw_numeric_param=param,
                 explanation="Test",
                 confidence=0.9,
             )
             result = validate_and_guardrail_directives([raw], 1, 50.0)
-            # no_op always has applies=False by design
             if dtype != "no_op":
                 assert result[0].applies is True, f"Failed for type: {dtype}"
+                assert result[0].directive_type == dtype
+                assert result[0].structured_adjustment is not None
+            else:
+                assert result[0].applies is False
+                assert result[0].directive_type == "no_op"
+                assert result[0].structured_adjustment is None
 
     def test_invalid_directive_type(self):
-        """Unknown directive type should fall back."""
+        """Unknown directive type should fall back to no_op with structured_adjustment=None."""
         raw = RawDirectiveDTO(
             note_index=0,
             directive_type="invalid_type",
@@ -186,6 +201,8 @@ class TestDirectiveTypeValidation:
         )
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         assert result[0].applies is False
+        assert result[0].directive_type == "no_op"
+        assert result[0].structured_adjustment is None
         assert "Unknown directive type" in result[0].fallback_reason
 
 
@@ -217,6 +234,8 @@ class TestConfidenceValidation:
         )
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         assert result[0].applies is False
+        assert result[0].directive_type == "no_op"
+        assert result[0].structured_adjustment is None
         assert "Low confidence" in result[0].fallback_reason
 
 
@@ -235,6 +254,8 @@ class TestNoOpDirective:
         )
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         assert result[0].applies is False
+        assert result[0].directive_type == "no_op"
+        assert result[0].structured_adjustment is None
 
 
 class TestNeverCrash:
@@ -273,6 +294,82 @@ class TestNeverCrash:
         result = validate_and_guardrail_directives([raw], 1, 50.0)
         # Should keep only valid integers: 10, 20
         assert result[0].hours == [10, 20]
+
+
+class TestMember1ContractAlignment:
+    """Explicit tests verifying the contract requirements requested by Member 1."""
+
+    def test_output_model_fields(self):
+        """Must return note_index, applies, directive_type, structured_adjustment, explanation."""
+        raw = RawDirectiveDTO(
+            note_index=1,
+            directive_type="solar_reduction",
+            raw_hours=[13, 14],
+            raw_numeric_param=0.2,
+            explanation="Solar drop to 20%",
+            confidence=0.95,
+        )
+        result = validate_and_guardrail_directives([raw], 1, 50.0)
+        assert len(result) == 1
+        d = result[0]
+        # Verify exact field presence and values
+        dumped = d.model_dump()
+        expected_keys = {"note_index", "applies", "directive_type", "structured_adjustment", "explanation"}
+        assert set(dumped.keys()) == expected_keys
+        assert dumped["note_index"] == 1
+        assert dumped["applies"] is True
+        assert dumped["directive_type"] == "solar_reduction"
+        assert dumped["structured_adjustment"] == {"hours": [13, 14], "factor": 0.2}
+        assert "Solar" in dumped["explanation"]
+
+    def test_minimum_battery_reserve_uses_minimum_energy_kwh_directly(self):
+        """minimum_battery_reserve must use minimum_energy_kwh directly, not percentage."""
+        raw = RawDirectiveDTO(
+            note_index=0,
+            directive_type="minimum_battery_reserve",
+            raw_hours=[18, 19, 20],
+            raw_numeric_param=120.0,
+            explanation="Keep at least 120 kWh in reserve",
+            confidence=0.99,
+        )
+        result = validate_and_guardrail_directives([raw], 1, 200.0)
+        d = result[0]
+        assert d.applies is True
+        assert d.directive_type == "minimum_battery_reserve"
+        assert d.structured_adjustment == {"hours": [18, 19, 20], "minimum_energy_kwh": 120.0}
+
+    def test_max_grid_window_uses_max_grid_kwh_directly(self):
+        """max_grid_window must use max_grid_kwh directly, not percentage."""
+        raw = RawDirectiveDTO(
+            note_index=2,
+            directive_type="max_grid_window",
+            raw_hours=[14, 15],
+            raw_numeric_param=50.0,
+            explanation="Cap grid import to 50 kWh",
+            confidence=0.92,
+        )
+        result = validate_and_guardrail_directives([raw], 1, 100.0)
+        d = result[0]
+        assert d.applies is True
+        assert d.directive_type == "max_grid_window"
+        assert d.structured_adjustment == {"hours": [14, 15], "max_grid_kwh": 50.0}
+
+    def test_fallback_becomes_no_op_with_none_adjustment(self):
+        """When applies=False, directive_type must be 'no_op' and structured_adjustment must be None."""
+        invalid_raw = RawDirectiveDTO(
+            note_index=0,
+            directive_type="minimum_battery_reserve",
+            raw_hours=[10, 11],
+            raw_numeric_param=500.0,  # 500 kWh exceeds 50 kWh capacity!
+            explanation="Invalid reserve request",
+            confidence=0.9,
+        )
+        result = validate_and_guardrail_directives([invalid_raw], 1, 50.0)
+        d = result[0]
+        assert d.applies is False
+        assert d.directive_type == "no_op"
+        assert d.structured_adjustment is None
+        assert "exceeds capacity" in d.explanation
 
 
 if __name__ == "__main__":

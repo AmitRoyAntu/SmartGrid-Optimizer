@@ -32,48 +32,89 @@ class RawDirectiveDTO:
 # DTOs from Member 3 (Guardrails & Validator)
 # ============================================================================
 
-@dataclass
-class DirectiveInterpretation:
+# ============================================================================
+# DTOs from Member 3 (Guardrails & Validator)
+# ============================================================================
+
+class DirectiveInterpretation(BaseModel):
     """
-    Validated, deterministic directive from guardrails validator (Member 3).
+    Validated directive matching Problem Statement Section 10.2 schema.
+    Shared contract between Guardrails Validator, LP Optimizer, and HTTP API response.
     """
     note_index: int
+    applies: bool
     directive_type: str
-    hours: List[int] = field(default_factory=list)
-    factor: float = 1.0
-    applies: bool = False
-    applied_constraint: str = ""
-    fallback_reason: Optional[str] = None
+    structured_adjustment: Optional[Dict[str, Any]] = None
     explanation: str = ""
 
-    def to_api_response(self) -> "DirectiveInterpretationResponse":
-        """Convert internal interpretation to Problem Statement Section 10.2 format."""
-        if not self.applies or self.directive_type == "no_op":
-            return DirectiveInterpretationResponse(
-                note_index=self.note_index,
-                applies=False,
-                directive_type="no_op",
-                structured_adjustment=None,
-                explanation=self.fallback_reason or self.explanation or "No operation applied to schedule.",
-            )
+    # Backward-compatible helper properties for optimizer and test assertions
+    @property
+    def hours(self) -> List[int]:
+        if self.structured_adjustment and "hours" in self.structured_adjustment:
+            return self.structured_adjustment["hours"]
+        return []
 
-        structured_adjustment = None
-        if self.directive_type == "solar_reduction":
-            structured_adjustment = {"hours": self.hours, "factor": round(self.factor, 4)}
-        elif self.directive_type == "minimum_battery_reserve":
-            structured_adjustment = {"hours": self.hours, "minimum_energy_kwh": round(self.factor, 4)}
-        elif self.directive_type in ("no_charge_window", "no_discharge_window"):
-            structured_adjustment = {"hours": self.hours}
-        elif self.directive_type == "max_grid_window":
-            structured_adjustment = {"hours": self.hours, "max_grid_kwh": round(self.factor, 4)}
+    @property
+    def factor(self) -> float:
+        if self.structured_adjustment:
+            if "factor" in self.structured_adjustment:
+                return float(self.structured_adjustment["factor"])
+            if "minimum_energy_kwh" in self.structured_adjustment:
+                return float(self.structured_adjustment["minimum_energy_kwh"])
+            if "max_grid_kwh" in self.structured_adjustment:
+                return float(self.structured_adjustment["max_grid_kwh"])
+        return 1.0
 
-        return DirectiveInterpretationResponse(
-            note_index=self.note_index,
-            applies=True,
-            directive_type=self.directive_type,
-            structured_adjustment=structured_adjustment,
-            explanation=self.explanation or self.applied_constraint or f"Applied {self.directive_type}",
-        )
+    @property
+    def fallback_reason(self) -> Optional[str]:
+        return self.explanation if not self.applies else None
+
+    @property
+    def applied_constraint(self) -> str:
+        return self.explanation
+
+    def to_api_response(self) -> "DirectiveInterpretation":
+        """Self-identity: already matches official API response format."""
+        return self
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_directive_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # If instantiated with legacy fields without structured_adjustment
+            if "structured_adjustment" not in data:
+                dtype = data.get("directive_type", "no_op")
+                applies = data.get("applies", False)
+                if not applies or dtype == "no_op":
+                    data["directive_type"] = "no_op"
+                    data["applies"] = False
+                    data["structured_adjustment"] = None
+                else:
+                    hours = data.get("hours", [])
+                    if dtype == "solar_reduction":
+                        data["structured_adjustment"] = {
+                            "hours": hours,
+                            "factor": data.get("factor", 1.0),
+                        }
+                    elif dtype == "minimum_battery_reserve":
+                        data["structured_adjustment"] = {
+                            "hours": hours,
+                            "minimum_energy_kwh": data.get("minimum_energy_kwh", data.get("factor", 0.0)),
+                        }
+                    elif dtype == "max_grid_window":
+                        data["structured_adjustment"] = {
+                            "hours": hours,
+                            "max_grid_kwh": data.get("max_grid_kwh", data.get("factor", 0.0)),
+                        }
+                    elif dtype in ("no_charge_window", "no_discharge_window"):
+                        data["structured_adjustment"] = {"hours": hours}
+
+            if "explanation" not in data or not data["explanation"]:
+                data["explanation"] = data.get("applied_constraint", data.get("fallback_reason", ""))
+        return data
+
+
+DirectiveInterpretationResponse = DirectiveInterpretation
 
 
 # ============================================================================
@@ -216,13 +257,7 @@ class HourlyPlanItem(BaseModel):
         return data
 
 
-class DirectiveInterpretationResponse(BaseModel):
-    """Problem Statement Section 10.2: Directive interpretation entry."""
-    note_index: int
-    applies: bool
-    directive_type: str
-    structured_adjustment: Optional[Dict[str, Any]] = None
-    explanation: str
+
 
 
 class CalculatedMetrics(BaseModel):
