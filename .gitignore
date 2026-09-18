@@ -1,1 +1,100 @@
+# ==============================================================================
+# Git Ignore Configuration - SmartGrid-Optimizer
+# ==============================================================================
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+**/__pycache__/
+*/**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*.[oa]
+*.so
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.env.virtualenv/
+.envrc
+
+# Environment Variables & Secrets (CRITICAL: NEVER COMMIT SECRETS)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+
+# Testing, Linting & Type Checking caches
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+**/__pycache__-pytest*
+.mypy_cache/
+.ruff_cache/
+cover/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# macOS / OS specific artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker / Deployment temporary artifacts
+*.log
+deploy/*.tar
+deploy/*.gz
+deploy/*.sock
