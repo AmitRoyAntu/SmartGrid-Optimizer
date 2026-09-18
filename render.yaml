@@ -1,0 +1,25 @@
+# =============================================================================
+# Render Blueprint Specification — GridWise LLM Smart Campus Energy Optimizer
+# =============================================================================
+services:
+  - type: web
+    name: smartgrid-optimizer
+    runtime: docker
+    dockerfilePath: deploy/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LLM_TIMEOUT_SEC
+        value: "4.0"
