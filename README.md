@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![HiGHS](https://img.shields.io/badge/HiGHS-LP%20Solver-orange.svg)](https://highs.dev/)
-[![Groq](https://img.shields.io/badge/LLM-Groq%20Llama%203.3%2070B-f55036.svg)](https://groq.com/)
+[![Groq](https://img.shields.io/badge/LLM-Groq%20Cloud%20API-f55036.svg)](https://groq.com/)
 [![Tests](https://img.shields.io/badge/Tests-46%20Passed%20%2F%20100%25-brightgreen.svg)]()
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](deploy/Dockerfile)
 
@@ -42,7 +42,7 @@ flowchart TD
     end
 
     subgraph LLMLayer ["LLM Semantic Extractor (Member 2)"]
-        GROQ["Groq Cloud API\n(Llama-3.3-70b-versatile / 8b-instant)"]
+        GROQ["Groq Cloud API\n(openai/gpt-oss-20b)"]
         FALLBACK["Heuristic / Safe Degrader\n(Zero-Crash on timeout/error)"]
     end
 
@@ -78,7 +78,7 @@ flowchart TD
 
 1. **Two-Stage Decoupled Intelligence**:
    - LLMs excel at understanding nuance ("*storm coming afternoon*", "*save power for evening classes*") but hallucinate numerical calculations.
-   - We use Groq's high-speed Llama models strictly for **semantic intent extraction** into structured Pydantic directives.
+   - We use Groq's high-speed inference engine (openai/gpt-oss-20b) strictly for **semantic intent extraction** into structured Pydantic directives.
    - The actual schedule is computed by **HiGHS LP**, ensuring absolute mathematical optimality and physical feasibility.
 
 2. **Bulletproof Zero-Crash Guarantee**:
