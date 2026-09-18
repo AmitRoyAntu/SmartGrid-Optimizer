@@ -37,7 +37,9 @@ class OptimizeEnergyRequest(BaseModel):
         hour_numbers = [item.hour for item in self.hours]
 
         if sorted(hour_numbers) != list(range(24)):
-            raise ValueError("hours must contain unique hours 0 through 23")
+            raise ValueError(
+                "hours must contain unique hours 0 through 23"
+            )
 
         return self
 
@@ -58,16 +60,18 @@ class DirectiveInterpretation(BaseModel):
 
 
 class HourlyPlanItem(BaseModel):
-    hour: int
-    grid_kwh: float
-    solar_used_kwh: float
+    hour: int = Field(ge=0, le=23)
+    grid_kwh: float = Field(ge=0)
+    solar_used_kwh: float = Field(ge=0)
+
     battery_action: Literal[
         "charge",
         "discharge",
         "idle",
     ]
-    battery_kwh: float
-    battery_energy_after_kwh: float
+
+    battery_kwh: float = Field(ge=0)
+    battery_energy_after_kwh: float = Field(ge=0)
 
 
 class OptimizeEnergyResponse(BaseModel):
@@ -79,10 +83,12 @@ class OptimizeEnergyResponse(BaseModel):
     peak_grid_kwh: float
     plan_summary: str
 
+
 class CalculatedMetrics(BaseModel):
     total_grid_kwh: float
     total_cost_bdt: float
     peak_grid_kwh: float
+
 
 class RawDirectiveDTO(BaseModel):
     note_index: int
