@@ -4,25 +4,36 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![HiGHS](https://img.shields.io/badge/HiGHS-LP%20Solver-orange.svg)](https://highs.dev/)
 [![Groq](https://img.shields.io/badge/LLM-Groq%20Cloud%20API-f55036.svg)](https://groq.com/)
-[![Tests](https://img.shields.io/badge/Tests-46%20Passed%20%2F%20100%25-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-47%20Passed%20%2F%20100%25-brightgreen.svg)]()
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](deploy/Dockerfile)
+[![Render](https://img.shields.io/badge/Render-Live%20API%20%E2%9C%94-success?style=flat&logo=render)](https://smartgrid-optimizer-fep8.onrender.com)
 
 > **BUP CSE Fest 2026 Hackathon — Online Preliminary Round**  
 > **Challenge**: LLM-Assisted Smart Campus Energy Scheduling & Operator Directive Interpretation  
-> **Repository**: [AmitRoyAntu/SmartGrid-Optimizer](https://github.com/AmitRoyAntu/SmartGrid-Optimizer)
+> **Repository**: [AmitRoyAntu/SmartGrid-Optimizer](https://github.com/AmitRoyAntu/SmartGrid-Optimizer)  
+> **Live Production Deployment**: [https://smartgrid-optimizer-fep8.onrender.com](https://smartgrid-optimizer-fep8.onrender.com)
+
+---
+
+## 🌐 Live Cloud Endpoints (Render)
+- **Base URL**: `https://smartgrid-optimizer-fep8.onrender.com`
+- **Readiness Health Check**: [`https://smartgrid-optimizer-fep8.onrender.com/health`](https://smartgrid-optimizer-fep8.onrender.com/health)
+- **Interactive Swagger UI**: [`https://smartgrid-optimizer-fep8.onrender.com/docs`](https://smartgrid-optimizer-fep8.onrender.com/docs)
+- **Main Optimization Endpoint**: `POST https://smartgrid-optimizer-fep8.onrender.com/optimize-energy`
 
 ---
 
 ## 📑 Table of Contents
-1. [System Architecture](#-system-architecture)
-2. [Key Innovations & Engineering Decisions](#-key-innovations--engineering-decisions)
-3. [Mathematical Formulation (HiGHS LP)](#-mathematical-formulation-highs-lp)
-4. [Guardrails & Zero-Crash Architecture](#-guardrails--zero-crash-architecture)
-5. [API Contract & Specifications](#-api-contract--specifications)
-6. [Quickstart Guide](#-quickstart-guide)
-7. [Sample `curl` Request & Response](#-sample-curl-request--response)
-8. [Performance & Benchmarks](#-performance--benchmarks)
-9. [Team Structure & Video Script](#-team-structure--video-script)
+1. [Live Cloud Endpoints (Render)](#-live-cloud-endpoints-render)
+2. [System Architecture](#-system-architecture)
+3. [Key Innovations & Engineering Decisions](#-key-innovations--engineering-decisions)
+4. [Mathematical Formulation (HiGHS LP)](#-mathematical-formulation-highs-lp)
+5. [Guardrails & Zero-Crash Architecture](#-guardrails--zero-crash-architecture)
+6. [API Contract & Specifications](#-api-contract--specifications)
+7. [Quickstart Guide](#-quickstart-guide)
+8. [Sample `curl` Request & Response](#-sample-curl-request--response)
+9. [Performance & Benchmarks](#-performance--benchmarks)
+10. [Team Structure & Video Script](#-team-structure--video-script)
 
 ---
 
@@ -206,8 +217,8 @@ uv run --with pytest --with pytest-asyncio --with scipy --with numpy --with pyda
 ## 💻 Sample `curl` Request & Response
 
 ```bash
-# Test sample scenario GRID-101
-curl -X POST http://localhost:8000/optimize-energy \
+# Query Live Cloud Deployment on Render (or replace with http://localhost:8000):
+curl -X POST https://smartgrid-optimizer-fep8.onrender.com/optimize-energy \
   -H "Content-Type: application/json" \
   -d '{
     "scenario_id": "GRID-101",
