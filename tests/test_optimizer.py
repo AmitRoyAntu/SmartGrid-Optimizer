@@ -308,15 +308,13 @@ class TestDirectiveConstraints:
         battery = BatterySpec(
             capacity=100.0, initial_soc=0.5, max_charge_rate=20.0, max_discharge_rate=20.0
         )
-        # Demand high, battery wants to discharge, but reserve is 40 kWh (0.4)
+        # Demand high, battery wants to discharge, but reserve is 40 kWh
         directive = DirectiveInterpretation(
             note_index=0,
             directive_type="minimum_battery_reserve",
-            hours=[18, 19, 20],
-            factor=0.4,
+            structured_adjustment={"hours": [18, 19, 20], "minimum_energy_kwh": 40.0},
             applies=True,
-            applied_constraint="Reserve floor 40%",
-            fallback_reason=None,
+            explanation="Reserve floor 40 kWh",
         )
         schedule, feasible = solve_energy_schedule(hours, battery, [directive])
         assert feasible
@@ -338,11 +336,9 @@ class TestDirectiveConstraints:
         directive = DirectiveInterpretation(
             note_index=0,
             directive_type="max_grid_window",
-            hours=[14, 15],
-            factor=35.0,  # Max grid 35 kWh
+            structured_adjustment={"hours": [14, 15], "max_grid_kwh": 35.0},
             applies=True,
-            applied_constraint="Max grid cap 35 kWh",
-            fallback_reason=None,
+            explanation="Max grid cap 35 kWh",
         )
         schedule, feasible = solve_energy_schedule(hours, battery, [directive])
         assert feasible

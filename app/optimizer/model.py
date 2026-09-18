@@ -136,37 +136,38 @@ def setup_lp_problem(
         if not directive.applies:
             continue
 
+        adj = directive.structured_adjustment or {}
+        hours_list = adj.get("hours", getattr(directive, "hours", []))
+
         if directive.directive_type == "no_charge_window":
             # Prohibit charging during listed hours
-            for h in directive.hours:
+            for h in hours_list:
                 ub[n_vars_per_hour * h + 1] = 0.0
 
         elif directive.directive_type == "no_discharge_window":
             # Prohibit discharging during listed hours
-            for h in directive.hours:
+            for h in hours_list:
                 ub[n_vars_per_hour * h + 2] = 0.0
 
         elif directive.directive_type == "minimum_battery_reserve":
-            # Enforce minimum battery reserve floor
-            target_hours = directive.hours if directive.hours else list(range(n_hours))
-            reserve_kwh = (
-                directive.factor
-                if directive.factor > 1.0
-                else directive.factor * battery.capacity
-            )
+            # Enforce minimum battery reserve floor (direct kWh)
+            target_hours = hours_list if hours_list else list(range(n_hours))
+            reserve_kwh = adj.get("minimum_energy_kwh")
+            if reserve_kwh is None:
+                # Fallback for legacy ratio if passed
+                f = getattr(directive, "factor", 0.0)
+                reserve_kwh = f if f > 1.0 else f * battery.capacity
             for h in target_hours:
-                lb[soc_offset + h] = max(lb[soc_offset + h], reserve_kwh)
+                lb[soc_offset + h] = max(lb[soc_offset + h], float(reserve_kwh))
 
         elif directive.directive_type == "max_grid_window":
-            # Enforce maximum grid import limit
-            target_hours = directive.hours if directive.hours else list(range(n_hours))
-            max_grid = (
-                directive.factor
-                if directive.factor > 1.0
-                else directive.factor * (battery.max_discharge_rate * 10)
-            )
+            # Enforce maximum grid import limit (direct kWh)
+            target_hours = hours_list if hours_list else list(range(n_hours))
+            max_grid = adj.get("max_grid_kwh")
+            if max_grid is None:
+                max_grid = getattr(directive, "factor", 100.0)
             for h in target_hours:
-                ub[n_vars_per_hour * h + 0] = min(ub[n_vars_per_hour * h + 0], max_grid)
+                ub[n_vars_per_hour * h + 0] = min(ub[n_vars_per_hour * h + 0], float(max_grid))
 
     bounds = [(float(lb[i]), float(ub[i])) for i in range(n_total_vars)]
 
