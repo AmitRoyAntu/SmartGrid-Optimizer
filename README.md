@@ -206,69 +206,93 @@ uv run --with pytest --with pytest-asyncio --with scipy --with numpy --with pyda
 ## 💻 Sample `curl` Request & Response
 
 ```bash
+# Test sample scenario GRID-101
 curl -X POST http://localhost:8000/optimize-energy \
   -H "Content-Type: application/json" \
   -d '{
-    "demand_profile_kwh": [12.0, 11.5, 10.8, 10.2, 10.0, 11.0, 15.0, 22.0, 30.0, 35.0, 38.0, 40.0, 39.0, 37.0, 35.0, 33.0, 36.0, 42.0, 45.0, 40.0, 32.0, 25.0, 18.0, 14.0],
-    "solar_profile_kwh": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 8.0, 18.0, 28.0, 35.0, 40.0, 42.0, 38.0, 30.0, 20.0, 10.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    "grid_tariff_cents_per_kwh": [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 15.0, 25.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 35.0, 45.0, 45.0, 40.0, 25.0, 15.0, 10.0, 10.0],
-    "battery_capacity_kwh": 100.0,
-    "initial_battery_energy_kwh": 50.0,
-    "battery_power_limit_kw": 25.0,
-    "battery_round_trip_efficiency": 0.90,
+    "scenario_id": "GRID-101",
     "operator_notes": [
-      "Keep at least 25 kWh in the battery between hours 18 and 22 for emergency backup.",
-      "The transformer is scheduled for maintenance; limit grid import to 30 kW from hours 12 to 15."
-    ]
+      "Solar output will drop to about 20% from 1 PM to 3 PM.",
+      "Do not charge the battery between 2 PM and 4 PM."
+    ],
+    "hours": [
+      {"hour": 0, "demand_kwh": 180, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 1, "demand_kwh": 160, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 2, "demand_kwh": 150, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 3, "demand_kwh": 140, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 4, "demand_kwh": 145, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 5, "demand_kwh": 160, "solar_kwh": 0, "tariff_bdt_per_kwh": 7.0},
+      {"hour": 6, "demand_kwh": 200, "solar_kwh": 20, "tariff_bdt_per_kwh": 7.5},
+      {"hour": 7, "demand_kwh": 280, "solar_kwh": 80, "tariff_bdt_per_kwh": 8.0},
+      {"hour": 8, "demand_kwh": 350, "solar_kwh": 150, "tariff_bdt_per_kwh": 9.0},
+      {"hour": 9, "demand_kwh": 420, "solar_kwh": 230, "tariff_bdt_per_kwh": 9.5},
+      {"hour": 10, "demand_kwh": 460, "solar_kwh": 300, "tariff_bdt_per_kwh": 10.0},
+      {"hour": 11, "demand_kwh": 480, "solar_kwh": 340, "tariff_bdt_per_kwh": 10.0},
+      {"hour": 12, "demand_kwh": 470, "solar_kwh": 350, "tariff_bdt_per_kwh": 9.5},
+      {"hour": 13, "demand_kwh": 450, "solar_kwh": 320, "tariff_bdt_per_kwh": 9.5},
+      {"hour": 14, "demand_kwh": 430, "solar_kwh": 270, "tariff_bdt_per_kwh": 9.5},
+      {"hour": 15, "demand_kwh": 390, "solar_kwh": 190, "tariff_bdt_per_kwh": 10.0},
+      {"hour": 16, "demand_kwh": 360, "solar_kwh": 100, "tariff_bdt_per_kwh": 10.5},
+      {"hour": 17, "demand_kwh": 340, "solar_kwh": 30, "tariff_bdt_per_kwh": 12.0},
+      {"hour": 18, "demand_kwh": 380, "solar_kwh": 0, "tariff_bdt_per_kwh": 14.0},
+      {"hour": 19, "demand_kwh": 410, "solar_kwh": 0, "tariff_bdt_per_kwh": 14.0},
+      {"hour": 20, "demand_kwh": 370, "solar_kwh": 0, "tariff_bdt_per_kwh": 13.0},
+      {"hour": 21, "demand_kwh": 300, "solar_kwh": 0, "tariff_bdt_per_kwh": 11.0},
+      {"hour": 22, "demand_kwh": 250, "solar_kwh": 0, "tariff_bdt_per_kwh": 9.0},
+      {"hour": 23, "demand_kwh": 200, "solar_kwh": 0, "tariff_bdt_per_kwh": 8.0}
+    ],
+    "battery": {
+      "capacity_kwh": 500,
+      "initial_energy_kwh": 200,
+      "minimum_energy_kwh": 50,
+      "max_charge_kwh_per_hour": 100,
+      "max_discharge_kwh_per_hour": 100,
+      "round_trip_efficiency": 0.90
+    }
   }'
 ```
 
-**Truncated Output:**
+**Output (HTTP 200 OK):**
 ```json
 {
-  "hourly_schedule": [
-    {
-      "hour": 0,
-      "grid_import_kwh": 12.0,
-      "battery_charge_kwh": 0.0,
-      "battery_discharge_kwh": 0.0,
-      "battery_energy_kwh": 50.0,
-      "solar_curtailed_kwh": 0.0
-    }
-  ],
+  "scenario_id": "GRID-101",
   "directive_interpretation": [
     {
       "note_index": 0,
       "applies": true,
-      "directive_type": "minimum_battery_reserve",
+      "directive_type": "solar_reduction",
       "structured_adjustment": {
-        "start_hour": 18,
-        "end_hour": 22,
-        "minimum_energy_kwh": 25.0
+        "start_hour": 13,
+        "end_hour": 15,
+        "factor": 0.2
       },
-      "explanation": "Extracted minimum battery reserve constraint of 25.0 kWh between hours 18 and 22."
+      "explanation": "Extracted solar reduction of 20% between hours 13 and 15."
     },
     {
       "note_index": 1,
       "applies": true,
-      "directive_type": "max_grid_window",
+      "directive_type": "no_charge_window",
       "structured_adjustment": {
-        "start_hour": 12,
-        "end_hour": 15,
-        "max_grid_kwh": 30.0
+        "start_hour": 14,
+        "end_hour": 16
       },
-      "explanation": "Extracted max grid import constraint of 30.0 kWh between hours 12 and 15."
+      "explanation": "Extracted no charge window between hours 14 and 16."
     }
   ],
-  "total_cost_usd": 124.32,
-  "baseline_cost_usd": 178.50,
-  "total_savings_usd": 54.18,
-  "solver_metadata": {
-    "status": "optimal",
-    "solver": "HiGHS",
-    "solve_time_ms": 0.89,
-    "iterations": 38
-  }
+  "hourly_plan": [
+    {
+      "hour": 0,
+      "grid_kwh": 280.0,
+      "solar_used_kwh": 0.0,
+      "battery_action": "charge",
+      "battery_kwh": 100.0,
+      "battery_energy_after_kwh": 300.0
+    }
+  ],
+  "total_grid_kwh": 5095.0,
+  "total_cost_bdt": 48765.0,
+  "peak_grid_kwh": 350.0,
+  "plan_summary": "Optimized 24h schedule with 5095.00 kWh total grid import at 48765.00 BDT cost (peak import 350.00 kWh)."
 }
 ```
 
