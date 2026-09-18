@@ -1,0 +1,32 @@
+# =============================================================================
+# GridWise LLM — Pinned Python Dependencies
+# =============================================================================
+# Pins are intentionally MINOR-floating (e.g. >=X.Y,<X+1) to allow patch fixes
+# while preventing breaking changes from major releases.
+# =============================================================================
+
+# --- Web framework ---
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20          # Required for FastAPI form/file parsing
+
+# --- Data validation ---
+pydantic==2.10.3
+pydantic-settings==2.7.0          # For BaseSettings in app/config.py
+
+# --- LLM Provider (Groq) ---
+# The official Groq SDK is a thin wrapper around the OpenAI client. We pin the
+# groq SDK because it handles a few Groq-specific concerns (rate-limit headers,
+# structured output helpers) cleanly.
+groq==0.13.0
+# httpx is a transitive dep but pinned here because we rely on its HTTP/2
+# behaviour for sub-second Groq round-trips.
+httpx==0.28.1
+
+# --- Numerical / Optimization stack ---
+numpy==2.2.0
+scipy==1.14.1                     # Provides scipy.optimize.linprog + HiGHS solver
+
+# --- Testing (dev) ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
