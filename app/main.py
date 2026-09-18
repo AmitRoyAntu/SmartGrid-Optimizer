@@ -8,6 +8,11 @@ Exposes:
 """
 
 import logging
+from dotenv import load_dotenv
+
+# Automatically load environment variables from .env file if present
+load_dotenv()
+
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError

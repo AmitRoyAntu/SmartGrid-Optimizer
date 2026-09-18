@@ -42,8 +42,8 @@ class Settings(BaseSettings):
         description="Groq model identifier. Defaults to openai/gpt-oss-20b.",
     )
     GROQ_BASE_URL: str = Field(
-        default="https://api.groq.com/openai/v1",
-        description="OpenAI-compatible base URL for the Groq API.",
+        default="https://api.groq.com",
+        description="Base URL for the Groq API.",
     )
     LLM_PROVIDER: Literal["groq", "mock"] = Field(
         default="groq",

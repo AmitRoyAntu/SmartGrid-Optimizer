@@ -27,8 +27,12 @@ def get_client() -> AsyncGroq:
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is missing")
+        base_url = os.environ.get("GROQ_BASE_URL")
+        if base_url:
+            base_url = base_url.removesuffix("/openai/v1").removesuffix("/")
         _client = AsyncGroq(
             api_key=api_key,
+            base_url=base_url or None,
             timeout=DEFAULT_TIMEOUT,
             max_retries=0  # Retries are handled manually to strictly control overall latency
         )
